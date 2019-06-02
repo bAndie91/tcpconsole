@@ -293,16 +293,44 @@ int dump_ps(int fd)
 		{
 			FILE *fh;
 			static char path[128];
-
-			snprintf(path, sizeof(path), "/proc/%s/stat", de -> d_name);
+			static char statusattrname[128];
+			static int ruid=-1, euid=-1, suid=-1, fuid=-1;
+			
+			snprintf(path, sizeof(path), "/proc/%s/status", de -> d_name);
 			fh = fopen(path, "r");
+			
+			if (fh)
+			{
+				while(!feof(fh))
+				{
+					fscanf(fh, "%s", statusattrname);
+					if(strcmp(statusattrname, "Uid:")==0)
+					{	/* Uid: Real, effective, saved set, and filesystem UIDs */
+						fscanf(fh, "%d %d %d %d", &ruid, &euid, &suid, &fuid);
+					}
+					else
+					{	/* Skip this line */
+						static char c;
+						while(!feof(fh) && (c = fgetc(fh)) != '\n');
+					}
+				}
+			}
+			
+			if (fh)
+			{
+				fclose(fh);
+				
+				snprintf(path, sizeof(path), "/proc/%s/stat", de -> d_name);
+				fh = fopen(path, "r");
+			}
+			
 			if (fh)
 			{
 				static char fname[4096], dummystr[2];
 				int dummy, nthreads, ppid, rss; 
 				fscanf(fh, "%d %s %c %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d", &dummy, fname, &dummystr[0], &ppid, &dummy, &dummy, &dummy, &dummy, &dummy, &dummy, &dummy, &dummy, &dummy, &dummy, &dummy, &dummy, &dummy, &dummy, &dummy, &nthreads, &dummy, &dummy, &dummy, &rss);
 
-				rc |= sockprint(fd, "%5s, ppid %5d, # threads: %2d, rss: %5d ", de -> d_name, ppid, nthreads, rss);
+				rc |= sockprint(fd, "%5s ppid %5d ruid %4d euid %4d thrds %2d rss %5d ", de -> d_name, ppid, ruid, euid, nthreads, rss);
 
 				tnprocs++;
 				tnthreads += nthreads;
@@ -332,7 +360,7 @@ int dump_ps(int fd)
 						if (cmdline[loop] == 0x00)
 							cmdline[loop] = ' ';
 					}
-					rc |= sockprint(fd, "%d %s\n", len, cmdline);
+					rc |= sockprint(fd, "[%d] %s\n", len, cmdline);
 				}
 
 				fclose(fh);
@@ -636,7 +664,7 @@ void kill_orphans()
 	const char *ctrl_file = "/proc/sys/net/ipv4/tcp_max_orphans";
 	
 	fd = fopen(ctrl_file, "r");
-	fscanf(fd, "%u", tcp_max_orphans);
+	fscanf(fd, "%u", &tcp_max_orphans);
 	fclose(fd);
 	
 	fd = fopen(ctrl_file, "w");
