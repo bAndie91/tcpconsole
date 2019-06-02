@@ -167,7 +167,6 @@ int ec_help(int fd)
 	rc |= sockprint(fd, "tcpconsole v " VERSION ", (C) 2009-2012 by folkert@vanheusden.com\n");
 	rc |= sockprint(fd, "1-8: set dmesg loglevel\n");
 	rc |= sockprint(fd, "d: dump virtual console 0\n");
-	rc |= sockprint(fd, "h: this help\n");
 	rc |= sockprint(fd, "i: show system load\n");
 	rc |= sockprint(fd, "j: 'kill -9' for a given pid\n");
 	rc |= sockprint(fd, "k: 'killall -9' for a given name\n");
