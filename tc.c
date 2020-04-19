@@ -135,9 +135,10 @@ int flush_socket(int fd)
 	return 0;
 }
 
+static char userinput_buffer[128];
+
 char *get_string(int fd)
 {
-	static char buffer[128];
 	size_t len = 0;
 
 	if (flush_socket(fd) == -1)
@@ -152,12 +153,12 @@ char *get_string(int fd)
 		if (key == 10 || key == 13)
 			break;
 
-		buffer[len++] = key;
+		userinput_buffer[len++] = key;
 	}
-	while(len < (sizeof(buffer) - 1));
-	buffer[len] = 0x00;
+	while(len < (sizeof(userinput_buffer) - 1));
+	userinput_buffer[len] = 0x00;
 
-	return strdup(buffer);
+	return userinput_buffer;
 }
 
 int ec_help(int fd)
@@ -420,7 +421,6 @@ int kill_one_proc(int client_fd)
 
 	if (strcmp(entered, "q") == 0)
 	{
-		free(entered);
 		return 0;
 	}
 
@@ -449,13 +449,11 @@ int kill_procs(int client_fd)
 
 	if (strcmp(entered, "q") == 0)
 	{
-		free(entered);
 		return 0;
 	}
 
 	if (sockprint(client_fd, "\nKilling proces %s\n", entered) == -1)
 	{
-		free(entered);
 		return -1;
 	}
 
@@ -498,8 +496,6 @@ int kill_procs(int client_fd)
 	}
 
 	closedir(dirp);
-
-	free(entered);
 
 	return sockprint(client_fd, "Terminated %d processes\n", nprocs);
 }
@@ -647,11 +643,8 @@ int verify_password(int client_fd, char *password)
 
 	if (strcmp(password, entered) == 0)
 	{
-		free(entered);
 		return 0;
 	}
-
-	free(entered);
 
 	return -1;
 }
@@ -790,7 +783,8 @@ char * read_password(char *file)
 	if(stat(file, &buf) == -1)
 	{
 		syslog(LOG_WARNING, "No password set!");
-		return strdup("");
+		pw = strdup("");
+		goto ret;
 	}
 	
 	int fd = open_file(file, O_RDONLY), rc;
@@ -809,6 +803,7 @@ char * read_password(char *file)
 	close(fd);
 
 	pw = strdup(buffer);
+	ret:
 	if (!pw)
 		error_exit(127, "strdup() failed");
 
