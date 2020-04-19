@@ -171,6 +171,8 @@ int ec_help(int fd)
 	rc |= sockprint(fd, "i: show system load\n");
 	rc |= sockprint(fd, "j: 'kill -9' for a given pid\n");
 	rc |= sockprint(fd, "k: 'killall -9' for a given name\n");
+	rc |= sockprint(fd, "t: 'killall -SIGSTOP' everything (almost)\n");
+	rc |= sockprint(fd, "c: 'killall -SIGCONT' for a given pid\n");
 	rc |= sockprint(fd, "l: dump dmesg logs\n");
 	rc |= sockprint(fd, "m: dump dmesg & clear dmesg buffer\n");
 	rc |= sockprint(fd, "p: process list\n");
@@ -433,6 +435,33 @@ int kill_one_proc(int client_fd)
 	return rc;
 }
 
+int cont_one_proc(int client_fd)
+{
+	int rc = 0;
+	pid_t pid;
+	char *entered;
+
+	if (sockprint(client_fd, "Process id (PID, q to abort): ") == -1)
+		return -1;
+
+	entered = get_string(client_fd);
+	if (!entered)
+		return -1;
+
+	if (strcmp(entered, "q") == 0)
+	{
+		return 0;
+	}
+
+	pid = atoi(entered);
+	rc = sockprint(client_fd, "Continuing pid %d\n", pid);
+
+	if (kill(pid, SIGCONT) == -1)
+		rc |= sockerror(client_fd, "kill(-SIGCONT)");
+
+	return rc;
+}
+
 int kill_procs(int client_fd)
 {
 	int nprocs = 0;
@@ -601,6 +630,15 @@ void serve_client(int fd, parameters_t *pars)
 			
 			case 's':
 				if (start_sshd(fd) == -1)
+					return;
+				break;
+
+			case 't':
+				
+				break;
+
+			case 'c':
+				if (cont_one_proc(fd) == -1)
 					return;
 				break;
 
