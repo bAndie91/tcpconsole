@@ -532,6 +532,7 @@ int kill_procs(int client_fd)
 int stop_all_procs(int client_fd)
 {
 	int nprocs = 0;
+	int nprocs_ok = 0;
 	struct dirent *de;
 	DIR *dirp = opendir("/proc");
 
@@ -556,15 +557,16 @@ int stop_all_procs(int client_fd)
 				}
 				else
 				{
-					nprocs++;
+					nprocs_ok++;
 				}
+				nprocs++;
 			}
 		}
 	}
 
 	closedir(dirp);
 
-	return sockprint(client_fd, "Stopped %d processes\n", nprocs);
+	return sockprint(client_fd, "Stopped %d processes (out of %d total)\n", nprocs_ok, nprocs);
 }
 
 int start_sshd(int fd)
