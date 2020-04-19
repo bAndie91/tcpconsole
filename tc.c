@@ -427,7 +427,7 @@ int kill_one_proc(int client_fd)
 	pid = atoi(entered);
 	rc = sockprint(client_fd, "Killing pid %d\n", pid);
 
-	if (kill(pid, SIGTERM) == -1)
+	if (kill(pid, SIGKILL) == -1)
 		rc |= sockerror(client_fd, "kill(-9)");
 
 	return rc;
@@ -481,7 +481,7 @@ int kill_procs(int client_fd)
 					if (sockprint(client_fd, "Killing pid %d\n", pid) == -1)
 						break;
 
-					if (kill(pid, SIGTERM) == -1)
+					if (kill(pid, SIGKILL) == -1)
 					{
 						if (sockerror(client_fd, "kill(-9)") == -1)
 							break;
