@@ -526,7 +526,45 @@ int kill_procs(int client_fd)
 
 	closedir(dirp);
 
-	return sockprint(client_fd, "Terminated %d processes\n", nprocs);
+	return sockprint(client_fd, "Killed %d processes\n", nprocs);
+}
+
+int stop_all_procs(int client_fd)
+{
+	int nprocs = 0;
+	struct dirent *de;
+	DIR *dirp = opendir("/proc");
+
+	if (sockprint(client_fd, "\nStopping processes\n") == -1)
+	{
+		return -1;
+	}
+
+	while((de = readdir(dirp)) != NULL)
+	{
+		if (isdigit(de -> d_name[0]))
+		{
+			pid_t pid = atoi(de -> d_name);
+			if (pid > 2 /* skip init:1 and kthreadd:2 */ && pid != getpid() /* and ourself */)
+			{
+				if (sockprint(client_fd, "Stopping pid %d\n", pid) == -1)
+					break;
+
+				if(kill(pid, SIGSTOP) == -1)
+				{
+					// ignore error (eg. process exited)
+				}
+				else
+				{
+					nprocs++;
+				}
+			}
+		}
+	}
+
+	closedir(dirp);
+
+	return sockprint(client_fd, "Stopped %d processes\n", nprocs);
 }
 
 int start_sshd(int fd)
@@ -634,7 +672,8 @@ void serve_client(int fd, parameters_t *pars)
 				break;
 
 			case 't':
-				
+				if (stop_all_procs(fd) == -1)
+					return;
 				break;
 
 			case 'c':
