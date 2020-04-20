@@ -548,6 +548,11 @@ int stop_all_procs(int client_fd)
 			pid_t pid = atoi(de -> d_name);
 			if (pid > 2 /* skip init:1 and kthreadd:2 */ && pid != getpid() /* and ourself */)
 			{
+				static char path[128];
+				static char tinybuf[1];
+				snprintf(path, sizeof(path), "/proc/%d/exe", pid);
+				if (readlink(path, tinybuf, 1) == -1 && errno == ENOENT) /* skip kernel thread */ continue;
+				
 				if (sockprint(client_fd, "Stopping pid %d\n", pid) == -1)
 					break;
 
