@@ -328,11 +328,23 @@ int dump_ps(int fd)
 			
 			if (fh)
 			{
-				static char fname[4096], dummystr[2];
-				int dummy, nthreads, ppid, rss; 
-				fscanf(fh, "%d %s %c %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d", &dummy, fname, &dummystr[0], &ppid, &dummy, &dummy, &dummy, &dummy, &dummy, &dummy, &dummy, &dummy, &dummy, &dummy, &dummy, &dummy, &dummy, &dummy, &dummy, &nthreads, &dummy, &dummy, &dummy, &rss);
+				static char state;
+				static int dummy, nthreads, ppid, rss;
+				static long pos = 0;
+				{
+					// Find the last ")" char in stat file and parse fields thereafter.
+					#define RIGHTBRACKET ')'
+					while(1)
+					{
+						state = fgetc(fh);
+						if (state == EOF) break;
+						if (state == RIGHTBRACKET) pos = ftell(fh);
+					}
+					fseek(fh, pos, 0);
+				}
+				fscanf(fh, " %c %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d", &state, &ppid, &dummy, &dummy, &dummy, &dummy, &dummy, &dummy, &dummy, &dummy, &dummy, &dummy, &dummy, &dummy, &dummy, &dummy, &dummy, &nthreads, &dummy, &dummy, &dummy, &rss);
 
-				rc |= sockprint(fd, "%5s ppid %5d ruid %4d euid %4d thrds %2d rss %5d ", de -> d_name, ppid, ruid, euid, nthreads, rss);
+				rc |= sockprint(fd, "%5s ppid %5d ruid %4d euid %4d thrds %2d rss %5d %c ", de -> d_name, ppid, ruid, euid, nthreads, rss, state);
 
 				tnprocs++;
 				tnthreads += nthreads;
