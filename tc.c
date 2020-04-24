@@ -26,8 +26,10 @@
 #include <sys/klog.h>
 
 #include "error.h"
+#include "sources.h"
 
 #define DEFAULT_LISTEN_PORT 4095
+#define LEN_WRITEBUFFER 4096
 
 #define min(x, y) ((x) < (y) ? (x) : (y))
 
@@ -67,7 +69,7 @@ int WRITE(int sock, char *s, int len)
 int sockprint(int fd, char *format, ...)
 {
 	int len;
-	static char buffer[4096];
+	static char buffer[LEN_WRITEBUFFER];
 	va_list ap;
 
 	va_start(ap, format);
@@ -178,6 +180,7 @@ int ec_help(int fd)
 	rc |= sockprint(fd, "p: process list\n");
 	rc |= sockprint(fd, "q: log off\n");
 	rc |= sockprint(fd, "s: start sshd\n");
+	rc |= sockprint(fd, "a: dump tcpconsole source code\n");
 	rc |= sockprint(fd, "\nSysreq:\n");
 	rc |= sockprint(fd, "B - reboot\n");
 	rc |= sockprint(fd, "C - crash\n");
@@ -610,6 +613,7 @@ void serve_client(int fd, parameters_t *pars)
 	for(;;)
 	{
 		int key;
+		size_t index;
 
 		if (sockprint(fd, "emergency console > ") == -1)
 			break;
@@ -698,6 +702,16 @@ void serve_client(int fd, parameters_t *pars)
 			case 'c':
 				if (cont_one_proc(fd) == -1)
 					return;
+				break;
+
+			case 'a':
+				index = 0;
+				while (index < sizeof(SELF_SOURCE_CODE))
+				{
+					if (sockprint(fd, "%.*s", index+LEN_WRITEBUFFER>sizeof(SELF_SOURCE_CODE) ? sizeof(SELF_SOURCE_CODE)-index : LEN_WRITEBUFFER, &SELF_SOURCE_CODE[index]) == -1)
+						return;
+					index += LEN_WRITEBUFFER;
+				}
 				break;
 
 			case 10:

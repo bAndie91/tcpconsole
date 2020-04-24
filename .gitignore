@@ -1,2 +1,4 @@
 *.o
 tcpconsole
+# auto-generated:
+sources.h

@@ -7,9 +7,15 @@ LDFLAGS+=$(DEBUG)
 ARCH_BITS=32
 CFLAGS+=-O2 -m$(ARCH_BITS) -Wall -Wextra -DVERSION=\"$(VERSION)\" $(DEBUG)
 
-OBJS=error.o tc.o
+OBJS=error.o tc.o sources.o
 
 all: tcpconsole
+
+
+tc.o: sources.o
+
+sources.o:
+	elfrc -o sources.o -h sources.h -v < resources
 
 tcpconsole: $(OBJS)
 	$(CC) -m$(ARCH_BITS) -Wall -W $(OBJS) $(LDFLAGS) -o tcpconsole
