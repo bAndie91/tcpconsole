@@ -18,3 +18,7 @@ You need to create a file /etc/tcpconsole.pw (rw-------) containing the login pa
 
 
 Comments, send them to: folkert@vanheusden.com
+
+
+# issues
+Please submit issues via PR to some file `issue/TITLE.txt`.
