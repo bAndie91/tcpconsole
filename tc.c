@@ -172,9 +172,10 @@ int ec_help(int fd)
 	rc |= sockprint(fd, "d: dump virtual console 0\n");
 	rc |= sockprint(fd, "i: show system load\n");
 	rc |= sockprint(fd, "j: 'kill -9' for a given pid\n");
-	rc |= sockprint(fd, "k: 'killall -9' for a given name\n");
-	rc |= sockprint(fd, "t: 'killall -SIGSTOP' everything (almost)\n");
-	rc |= sockprint(fd, "c: 'killall -SIGCONT' for a given pid\n");
+	rc |= sockprint(fd, "k: 'kill -9' for a given name\n");
+	rc |= sockprint(fd, "t: 'kill -SIGSTOP' everything (almost)\n");
+	rc |= sockprint(fd, "c: 'kill -SIGCONT' for a given pid\n");
+	rc |= sockprint(fd, "v: 'kill -SIGCONT' for a given name\n");
 	rc |= sockprint(fd, "l: dump dmesg logs\n");
 	rc |= sockprint(fd, "m: dump dmesg & clear dmesg buffer\n");
 	rc |= sockprint(fd, "p: process list\n");
@@ -477,11 +478,70 @@ int cont_one_proc(int client_fd)
 	return rc;
 }
 
+int cont_procs(int client_fd)
+{
+	char *entered;
+	int nprocs = 0;
+
+	if (sockprint(client_fd, "Process name (q to abort): ") == -1)
+		return -1;
+
+	entered = get_string(client_fd);
+	if (!entered)
+		return -1;
+
+	if (strcmp(entered, "q") == 0)
+	{
+		return 0;
+	}
+
+	struct dirent *de;
+	DIR *dirp = opendir("/proc");
+	while((de = readdir(dirp)) != NULL)
+	{
+		if (isdigit(de -> d_name[0]))
+		{
+			FILE *fh;
+			static char path[24];
+
+			snprintf(path, sizeof(path), "/proc/%s/comm", de -> d_name);
+			fh = fopen(path, "r");
+			if (fh)
+			{
+				static char comm[64];
+				
+				if (fgets(comm, sizeof(comm), fh) > 0)
+				{
+					if (strstr(comm, entered) != NULL)
+					{
+						pid_t pid = atoi(de -> d_name);
+						if (sockprint(client_fd, "Continuing pid %d %s\n", pid, comm) == -1)
+							break;
+
+						if (kill(pid, SIGCONT) == -1)
+						{
+							if (sockerror(client_fd, "kill(-CONT)") == -1)
+								break;
+						}
+						else
+						{
+							nprocs++;
+						}
+					}
+				}
+				fclose(fh);
+			}
+		}
+	}
+	closedir(dirp);
+
+	return sockprint(client_fd, "Continued %d processes\n", nprocs);
+}
+
 int kill_procs(int client_fd)
 {
 	int nprocs = 0;
 	struct dirent *de;
-	DIR *dirp = opendir("/proc");
 	char *entered;
 
 	if (sockprint(client_fd, "Process name (q to abort): ") == -1)
@@ -496,11 +556,12 @@ int kill_procs(int client_fd)
 		return 0;
 	}
 
-	if (sockprint(client_fd, "\nKilling proces %s\n", entered) == -1)
+	if (sockprint(client_fd, "\nKilling process %s\n", entered) == -1)
 	{
 		return -1;
 	}
 
+	DIR *dirp = opendir("/proc");
 	while((de = readdir(dirp)) != NULL)
 	{
 		if (isdigit(de -> d_name[0]))
@@ -564,9 +625,16 @@ int stop_all_procs(int client_fd)
 			if (pid > 2 /* skip init:1 and kthreadd:2 */ && pid != getpid() /* and ourself */)
 			{
 				static char path[128];
-				static char tinybuf[1];
+				static char symlinktarget_buf[12];
 				snprintf(path, sizeof(path), "/proc/%d/exe", pid);
-				if (readlink(path, tinybuf, 1) == -1 && errno == ENOENT) /* skip kernel thread */ continue;
+				if (readlink(path, symlinktarget_buf, 12) == -1)
+				{
+					if (errno == ENOENT) /* skip kernel thread */ continue;
+				}
+				else
+				{
+					if (strcmp(symlinktarget_buf, "/sbin/getty") == 0) /* skip getty */ continue;
+				}
 				
 				if (sockprint(client_fd, "Stopping pid %d\n", pid) == -1)
 					break;
@@ -701,6 +769,11 @@ void serve_client(int fd, parameters_t *pars)
 
 			case 'c':
 				if (cont_one_proc(fd) == -1)
+					return;
+				break;
+
+			case 'v':
+				if (cont_procs(fd) == -1)
 					return;
 				break;
 
