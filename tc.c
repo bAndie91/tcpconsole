@@ -30,6 +30,8 @@
 
 #define DEFAULT_LISTEN_PORT 4095
 #define LEN_WRITEBUFFER 4096
+//#define MAXCONN SOMAXCONN
+#define MAXCONN 1
 
 #define min(x, y) ((x) < (y) ? (x) : (y))
 
@@ -893,8 +895,8 @@ void listen_on_socket(int port, parameters_t *pars, char *password)
 		goto try_bind;
 	}
 
-	if (listen(server_fd, SOMAXCONN))
-		error_exit(127, "listen(%d) failed", SOMAXCONN);
+	if (listen(server_fd, MAXCONN))
+		error_exit(127, "listen(%d) failed", MAXCONN);
 
 	if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) == -1)
 		error_exit(127, "setsockopt(SO_REUSEADDR) failed");
