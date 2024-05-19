@@ -20,8 +20,21 @@ sources.o:
 tcpconsole: $(OBJS)
 	$(CC) -m$(ARCH_BITS) -Wall -W $(OBJS) $(LDFLAGS) -o tcpconsole
 
-install: tcpconsole
-	cp tcpconsole /usr/local/sbin
+install: /sbin/tcpconsole install-inittab
+
+/sbin/tcpconsole: tcpconsole
+	install tcpconsole /sbin
+
+install-inittab: /sbin/tcpconsole
+	grep -E '^tc:' /etc/inittab || echo "tc:12345:respawn:/sbin/tcpconsole" >>/etc/inittab
+	telinit q
+
+uninstall: uninstall-inittab
+	rm /sbin/tcpconsole
+
+uninstall-inittab:
+	sed -i /etc/inittab -e '/^tc:/d'
+	telinit q
 
 clean:
 	rm -f $(OBJS) core tcpconsole
@@ -33,3 +46,5 @@ package: clean
 	cp *.c *.h Makefile* readme.txt tcpconsole-$(VERSION)
 	tar cf - tcpconsole-$(VERSION) | gzip -9 > tcpconsole-$(VERSION).tgz
 	rm -rf tcpconsole-$(VERSION)
+
+.PHONY: all install install-inittab uninstall uninstall-inittab clean package
