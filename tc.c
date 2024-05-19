@@ -133,7 +133,10 @@ int flush_socket(int fd)
 			break;
 
 		if (FD_ISSET(fd, &rfds))
-			read(fd, buffer, sizeof(buffer));
+		{
+			rc = read(fd, buffer, sizeof(buffer));
+			if(rc == 0) break;
+		}
 	}
 
 	return 0;
