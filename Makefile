@@ -2,10 +2,10 @@ VERSION=0.3
 
 # www.vanheusden.com
 
-DEBUG=-g -D_DEBUG
-LDFLAGS+=$(DEBUG)
-ARCH_BITS=32
-CFLAGS+=-O2 -m$(ARCH_BITS) -Wall -Wextra -DVERSION=\"$(VERSION)\" $(DEBUG)
+DEBUG = -g -D_DEBUG
+ARCH_BITS = 32
+override LDFLAGS += $(DEBUG)
+override CFLAGS += -O2 -m$(ARCH_BITS) -Wall -Wextra -DVERSION=\"$(VERSION)\" $(DEBUG)
 
 OBJS=error.o tc.o sources.o
 
@@ -18,7 +18,7 @@ sources.o:
 	elfrc -o sources.o -h sources.h -v < resources
 
 tcpconsole: $(OBJS)
-	$(CC) -m$(ARCH_BITS) -Wall -W $(OBJS) $(LDFLAGS) -o tcpconsole
+	$(CC) $(CFLAGS) -m$(ARCH_BITS) -Wall -W $(OBJS) $(LDFLAGS) -o tcpconsole
 
 install: /sbin/tcpconsole install-inittab
 
